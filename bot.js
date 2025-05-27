@@ -6,6 +6,9 @@ const config = require('./config');
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 
+// Import web server functions
+const webServer = require('./web-server');
+
 // Gunakan stealth plugin untuk menghindari deteksi
 puppeteer.use(StealthPlugin());
 
@@ -227,15 +230,20 @@ class WhatsAppBot {
             console.log('\n' + '='.repeat(60));
             console.log('🔄 QR CODE WHATSAPP BOT');
             console.log('='.repeat(60));
-            console.log('📱 Scan QR code ini dengan WhatsApp di HP Anda:');
+            console.log('📱 QR Code tersedia di web interface: http://localhost:3000');
             console.log('='.repeat(60));
+            
+            // Tampilkan QR di terminal juga (backup)
             qrcode.generate(qr, { small: true });
+            
+            // Kirim QR ke web interface
+            webServer.emitQR(qr);
+            
             console.log('='.repeat(60));
             console.log('📋 Cara scan:');
-            console.log('1. Buka WhatsApp di HP');
-            console.log('2. Tap menu (3 titik) > Linked Devices');
-            console.log('3. Tap "Link a Device"');
-            console.log('4. Scan QR code di atas');
+            console.log('1. Buka http://localhost:3000 di browser');
+            console.log('2. Atau scan QR code di terminal ini');
+            console.log('3. Gunakan WhatsApp di HP untuk scan');
             console.log('='.repeat(60));
         });
 
@@ -246,10 +254,20 @@ class WhatsAppBot {
             console.log('🎉'.repeat(20));
             this.isConnected = true;
             this.reconnectAttempts = 0;
+            
+            // Kirim status ready ke web interface
+            webServer.emitReady();
+            
             await this.startMonitoring();
             
             console.log('📱 Bot siap menerima pesan!');
-            console.log('💡 Kirim pesan ke bot untuk test');
+            console.log('🌐 Web interface: http://localhost:3000');
+        });
+
+        // Authentication events
+        this.client.on('authenticated', () => {
+            console.log('🔐 Autentikasi berhasil!');
+            webServer.emitAuthenticated();
         });
 
         // Authentication Failed event
@@ -257,6 +275,10 @@ class WhatsAppBot {
             console.error('\n❌ Autentikasi gagal:', msg);
             console.log('🔄 Akan mencoba reconnect dalam 3 detik...');
             this.isConnected = false;
+            
+            // Kirim status error ke web interface
+            webServer.emitAuthFailure();
+            
             setTimeout(() => this.reconnect(), 3000);
         });
 
@@ -265,6 +287,10 @@ class WhatsAppBot {
             console.log('\n❌ Bot terputus:', reason);
             console.log('🔄 Akan mencoba reconnect dalam 3 detik...');
             this.isConnected = false;
+            
+            // Kirim status disconnected ke web interface
+            webServer.emitDisconnected();
+            
             setTimeout(() => this.reconnect(), 3000);
         });
 
@@ -286,6 +312,7 @@ class WhatsAppBot {
         // Global error handlers
         process.on('uncaughtException', async (err) => {
             console.error('❌ Error tidak tertangani:', err.message);
+            webServer.emitError();
             if (!this.isConnected) {
                 setTimeout(() => this.reconnect(), 5000);
             }
@@ -293,6 +320,7 @@ class WhatsAppBot {
 
         process.on('unhandledRejection', async (err) => {
             console.error('❌ Promise rejection tidak tertangani:', err.message);
+            webServer.emitError();
             if (!this.isConnected) {
                 setTimeout(() => this.reconnect(), 5000);
             }
