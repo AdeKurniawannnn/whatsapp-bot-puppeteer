@@ -3,6 +3,11 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const fetch = require('node-fetch');
 const config = require('./config');
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+
+// Gunakan stealth plugin untuk menghindari deteksi
+puppeteer.use(StealthPlugin());
 
 class WhatsAppBot {
     constructor() {
@@ -44,7 +49,8 @@ class WhatsAppBot {
                 dataPath: './session'
             }),
             puppeteer: {
-                headless: true, // Headless mode - tidak buka browser
+                headless: true,
+                executablePath: puppeteer.executablePath(),
                 args: [
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
@@ -61,8 +67,27 @@ class WhatsAppBot {
                     '--disable-extensions',
                     '--disable-plugins',
                     '--disable-images',
-                    '--disable-javascript',
-                    '--disable-default-apps'
+                    '--disable-default-apps',
+                    '--no-default-browser-check',
+                    '--disable-software-rasterizer',
+                    '--disable-background-networking',
+                    '--disable-sync',
+                    '--disable-translate',
+                    '--hide-scrollbars',
+                    '--metrics-recording-only',
+                    '--mute-audio',
+                    '--safebrowsing-disable-auto-update',
+                    '--ignore-certificate-errors',
+                    '--ignore-ssl-errors',
+                    '--ignore-certificate-errors-spki-list',
+                    '--ignore-certificate-errors-ssl-errors',
+                    '--disable-blink-features=AutomationControlled',
+                    '--disable-ipc-flooding-protection',
+                    '--disable-xss-auditor',
+                    '--disable-bundled-ppapi-flash',
+                    '--disable-plugins-discovery',
+                    '--disable-preconnect',
+                    '--disable-hang-monitor'
                 ]
             },
             restartOnAuthFail: true,
