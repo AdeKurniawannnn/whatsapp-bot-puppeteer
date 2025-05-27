@@ -1,0 +1,46 @@
+{
+  "name": "wa-bot",
+  "version": "1.0.0",
+  "description": "WhatsApp Bot using whatsapp-web.js",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node start.js",
+    "dev": "nodemon start.js",
+    "bot": "node index.js",
+    "headless": "node -e \"const config = require('./config'); config.browser.headless = true; require('./index.js');\"",
+    "test": "node -e \"console.log('Testing configuration...'); require('./config'); console.log('✅ Configuration is valid!');\""
+  },
+  "keywords": [
+    "whatsapp",
+    "bot",
+    "puppeteer",
+    "automation",
+    "whatsapp-web",
+    "chatbot",
+    "nodejs"
+  ],
+  "author": "Ade Kurniawan",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "node-fetch": "^2.7.0",
+    "openai": "^4.103.0",
+    "puppeteer": "^19.7.0",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.28.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/username/whatsapp-bot-puppeteer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/username/whatsapp-bot-puppeteer/issues"
+  },
+  "homepage": "https://github.com/username/whatsapp-bot-puppeteer#readme"
+}
