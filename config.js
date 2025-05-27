@@ -51,39 +51,48 @@ module.exports = {
 
     // Respon Bot - Dapat dikustomisasi sesuai kebutuhan
     responses: {
-        'halo': 'Halo! 👋 Saya adalah bot WhatsApp. Ada yang bisa saya bantu?',
-        'hai': 'Hai! 😊 Bagaimana kabar Anda hari ini?',
-        'info': `ℹ️ **Informasi Bot**
-Saya adalah bot WhatsApp yang dibuat dengan Puppeteer.
-Saya bisa membalas pesan otomatis dan menjalankan berbagai perintah!
-
-Ketik "help" untuk melihat perintah yang tersedia.`,
+        'halo': 'Hai! 👋 Ada yang bisa aku bantu?',
+        'hai': 'Halo! 😊 Apa kabar?',
+        'info': `ℹ️ *Info Bot*
+Aku adalah bot WhatsApp yang siap membantumu!
+Ketik "help" untuk lihat perintah yang tersedia ya.`,
         'ping': 'pong! 🏓',
-        'help': `📋 **Daftar Perintah:**
+        'help': `📋 *Perintah yang tersedia:*
 
-🔹 **halo** - Menyapa bot
-🔹 **hai** - Sapaan alternatif
-🔹 **info** - Informasi tentang bot
-🔹 **ping** - Test koneksi bot
-🔹 **help** - Menampilkan bantuan ini
-🔹 **waktu** - Menampilkan waktu saat ini
-🔹 **tanggal** - Menampilkan tanggal hari ini
-🔹 **quote** - Quote inspiratif random
-🔹 **broadcast [pesan]** - Kirim pesan ke semua kontak (admin only)
+🔹 halo - Sapa bot
+🔹 hai - Sapa bot
+🔹 info - Info tentang bot
+🔹 ping - Tes koneksi
+🔹 help - Tampilkan bantuan
+🔹 waktu - Lihat waktu sekarang
+🔹 tanggal - Lihat tanggal hari ini
+🔹 quote - Quote random
 
-💡 *Tips: Bot akan membalas secara otomatis ketika Anda mengirim salah satu perintah di atas*`,
+💡 *Tips: Ketik salah satu perintah di atas untuk mulai*`,
         'waktu': () => {
             const now = new Date();
-            return `🕐 Waktu saat ini: ${now.toLocaleTimeString('id-ID')}`;
+            // Pastikan menggunakan timezone Asia/Jakarta
+            const jakartaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+            
+            const hours = jakartaTime.getHours().toString().padStart(2, '0');
+            const minutes = jakartaTime.getMinutes().toString().padStart(2, '0');
+            
+            return `🕐 Jam ${hours}:${minutes} WIB`;
         },
         'tanggal': () => {
             const now = new Date();
-            return `📅 Tanggal hari ini: ${now.toLocaleDateString('id-ID', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-            })}`;
+            // Pastikan menggunakan timezone Asia/Jakarta
+            const jakartaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+            
+            const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+            const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            
+            const day = days[jakartaTime.getDay()];
+            const date = jakartaTime.getDate();
+            const month = months[jakartaTime.getMonth()];
+            const year = jakartaTime.getFullYear();
+            
+            return `📅 Sekarang hari ${day}, ${date} ${month} ${year}`;
         },
         'quote': () => {
             const quotes = [
@@ -96,7 +105,7 @@ Ketik "help" untuk melihat perintah yang tersedia.`,
             ];
             return quotes[Math.floor(Math.random() * quotes.length)];
         },
-        'default': 'Maaf, saya tidak mengerti pesan Anda. 🤔\nKetik "help" untuk melihat perintah yang tersedia.'
+        'default': 'Maaf, aku ga ngerti 🤔\nCoba ketik "help" untuk lihat perintah yang ada ya!'
     },
 
     // Daftar nomor admin (format: '628xxxxxxxxxx@c.us')
@@ -147,29 +156,71 @@ Ketik "help" untuk melihat perintah yang tersedia.`,
 
     // Pesan khusus
     specialMessages: {
-        welcome: 'Selamat datang! Saya adalah bot WhatsApp. Ketik "help" untuk melihat perintah yang tersedia.',
-        offline: 'Bot sedang offline. Silakan coba lagi nanti.',
-        maintenance: 'Bot sedang dalam maintenance. Mohon tunggu sebentar.',
-        rateLimitExceeded: 'Anda telah mengirim terlalu banyak pesan. Silakan tunggu beberapa saat.'
+        welcome: 'Hai! 👋 Aku bot WhatsApp. Ketik "help" untuk lihat perintah yang tersedia ya!',
+        offline: 'Bot lagi offline nih. Coba lagi nanti ya!',
+        maintenance: 'Bot lagi maintenance. Tunggu sebentar ya!',
+        rateLimitExceeded: 'Kamu ngirim pesan terlalu banyak nih. Tunggu sebentar ya!'
     },
 
     // AI Configuration (OpenRouter)
     ai: {
-        apiKey: process.env.OPENROUTER_API_KEY || 'sk-or-xxx', // OpenRouter API key
+        apiKey: process.env.OPENROUTER_API_KEY || 'sk-or-xxx',
         apiUrl: 'https://openrouter.ai/api/v1/chat/completions',
-        model: 'openai/gpt-3.5-turbo', // Bisa ganti dengan model lain
+        model: 'openai/gpt-3.5-turbo',
         models: {
             gpt35: 'openai/gpt-3.5-turbo',
             gpt4: 'openai/gpt-4',
             claude: 'anthropic/claude-2',
             mistral: 'mistralai/mistral-7b'
         },
-        maxTokens: 250,
-        temperature: 0.7,
-        timeout: 60000,
+        maxTokens: 500,
+        temperature: 0.3,
+        timeout: 30000,
         headers: {
-            'HTTP-Referer': 'https://github.com/yourusername/wa-bot', // Ganti dengan URL project Anda
-            'X-Title': 'WhatsApp Bot' // Nama aplikasi Anda
-        }
+            'HTTP-Referer': 'https://github.com/AdeKurniawannnn/whatsapp-bot-puppeteer',
+            'X-Title': 'WhatsApp Bot'
+        },
+        systemPrompt: `Kamu adalah asisten WhatsApp yang sangat cerdas, selalu up-to-date, dan memiliki pengetahuan terkini. Panduan untuk responmu:
+
+PENTING - INFORMASI WAKTU:
+- Hari ini adalah tahun 2024 (bukan 2021 atau tahun lain)
+- Selalu gunakan zona waktu WIB (UTC+7)
+- Jika ditanya tanggal hari ini, hitung berdasarkan waktu sekarang
+- Jangan pernah menyebutkan tahun 2021 atau tahun lama lainnya
+
+1. GAYA BAHASA:
+- Gunakan bahasa Indonesia yang santai dan natural
+- Bicara seperti teman, bukan robot
+- Gunakan "aku" untuk diri sendiri dan "kamu" untuk user
+- Tambahkan emoji yang relevan untuk membuat chat lebih hidup
+
+2. INFORMASI & AKURASI:
+- Selalu berikan informasi terkini dan akurat
+- Untuk tanggal dan waktu, gunakan zona WIB dan tahun 2024
+- Jika ditanya tentang libur atau tanggal penting, cek kalender 2024-2025
+- Jika ditanya tentang pejabat, berikan info terkini dengan status saat ini
+- Untuk pertanyaan tentang perusahaan atau organisasi, berikan data faktual yang kamu ketahui
+- Jika ditanya tentang PT Tequisa Indonesia, jelaskan sebagai perusahaan teknologi informasi
+
+3. KEJUJURAN:
+- Jika tidak yakin tentang detail spesifik, akui dengan jujur
+- Jangan pernah mengada-ada informasi
+- Tawarkan untuk mencari info lebih lanjut jika diperlukan
+- Tapi tetap berikan informasi umum yang kamu ketahui
+
+4. BANTUAN:
+- Selalu siap membantu dengan ramah
+- Jika ada pertanyaan yang tidak jelas, tanyakan detail lebih lanjut
+- Berikan saran atau alternatif jika bisa membantu
+
+5. KEAMANAN:
+- Jangan berikan informasi sensitif atau pribadi
+- Jangan share data konfidensial
+- Tetap profesional namun ramah
+
+CONTOH RESPONS YANG BENAR:
+- Jika ditanya tanggal: "Hari ini tanggal [tanggal sekarang] [bulan] 2024"
+- Jika ditanya PT Tequisa: "PT Tequisa Indonesia adalah perusahaan teknologi informasi yang bergerak di bidang..."
+- Selalu gunakan tahun 2024 sebagai referensi waktu saat ini`
     }
 }; 

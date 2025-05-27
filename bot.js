@@ -18,32 +18,20 @@ class WhatsAppBot {
         // Daftar perintah yang tersedia
         this.commands = {
             '!ping': 'Pong! 🏓\nStatus: Online\nWaktu: {time}',
-            '!halo': 'Halo juga! 👋\nAda yang bisa saya bantu?',
             '!menu': `*📋 DAFTAR PERINTAH BOT*\n
 1. !ping - Cek status bot
-2. !halo - Sapa bot
-3. !menu - Tampilkan daftar perintah
-4. !info - Info tentang bot
-5. !waktu - Cek waktu sekarang
-6. !help - Bantuan penggunaan bot
-7. !ai [pertanyaan] - Tanya ke AI
-8. !reset - Reset history chat dengan AI
-9. !model [nama_model] - Ganti model AI (gpt35/gpt4/claude/mistral)`,
+2. !menu - Tampilkan daftar perintah
+3. !info - Info tentang bot
+4. !ai [pertanyaan] - Tanya ke AI
+5. !reset - Reset history chat dengan AI
+6. !model [nama_model] - Ganti model AI (gpt35/gpt4/claude/mistral)`,
             '!info': `*ℹ️ INFO BOT*\n
 • Nama: WhatsApp Bot + AI
 • Dibuat dengan: whatsapp-web.js & OpenRouter
 • Model AI: ${config.ai.model}
 • Status: Active
 • Prefix: !
-• Waktu Aktif: {uptime}`,
-            '!waktu': 'Waktu sekarang: {time}',
-            '!help': `*❓ BANTUAN PENGGUNAAN BOT*\n
-• Semua perintah menggunakan awalan "!"
-• Untuk bertanya ke AI, gunakan !ai [pertanyaan]
-• Untuk ganti model AI, gunakan !model [nama_model]
-• Model yang tersedia: gpt35, gpt4, claude, mistral
-• Bot akan mengingat konteks percakapan
-• Gunakan !reset untuk memulai percakapan baru`
+• Waktu Aktif: {uptime}`
         };
 
         this.startTime = new Date();
@@ -52,15 +40,29 @@ class WhatsAppBot {
 
     initializeClient() {
         this.client = new Client({
-            authStrategy: new LocalAuth(),
+            authStrategy: new LocalAuth({
+                dataPath: './session'
+            }),
             puppeteer: {
-                headless: true,
+                headless: true, // Headless mode - tidak buka browser
                 args: [
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
                     '--disable-dev-shm-usage',
                     '--disable-accelerated-2d-canvas',
-                    '--disable-gpu'
+                    '--disable-gpu',
+                    '--disable-web-security',
+                    '--disable-features=VizDisplayCompositor',
+                    '--no-first-run',
+                    '--no-zygote',
+                    '--disable-background-timer-throttling',
+                    '--disable-backgrounding-occluded-windows',
+                    '--disable-renderer-backgrounding',
+                    '--disable-extensions',
+                    '--disable-plugins',
+                    '--disable-images',
+                    '--disable-javascript',
+                    '--disable-default-apps'
                 ]
             },
             restartOnAuthFail: true,
@@ -88,9 +90,9 @@ class WhatsAppBot {
             // Tambahkan pesan baru ke history
             history.push({ role: 'user', content: message });
 
-            // Batasi history ke 10 pesan terakhir untuk menghemat token
-            if (history.length > 10) {
-                history.splice(0, history.length - 10);
+            // Batasi history ke 5 pesan terakhir untuk menghemat token
+            if (history.length > 5) {
+                history.splice(0, history.length - 5);
             }
 
             try {
@@ -102,11 +104,11 @@ class WhatsAppBot {
                         ...config.ai.headers
                     },
                     body: JSON.stringify({
-                        model: this.currentModel,
+                        model: this.currentModel || config.ai.model,
                         messages: [
                             { 
                                 role: "system", 
-                                content: "Kamu adalah asisten AI yang membantu di WhatsApp. Berikan jawaban yang singkat, jelas, dan dalam Bahasa Indonesia. Gunakan emoji yang sesuai untuk membuat chat lebih menarik." 
+                                content: config.ai.systemPrompt
                             },
                             ...history
                         ],
@@ -133,26 +135,28 @@ class WhatsAppBot {
                 console.error('❌ Error API OpenRouter:', apiError.message);
                 
                 if (apiError.message.includes('timeout')) {
-                    return `❌ *AI Timeout*\n\nMaaf, respons dari AI terlalu lama. Silakan coba lagi dengan pertanyaan yang lebih singkat atau gunakan perintah bot biasa (!menu)`;
+                    return `❌ *AI Timeout*\n\nMaaf, respons dari AI terlalu lama. Coba lagi dengan pertanyaan yang lebih singkat ya!`;
                 } else if (apiError.message.includes('quota') || apiError.message.includes('credits')) {
-                    return `❌ *Kuota AI Habis*\n\nMaaf, kuota API OpenRouter sudah habis.\n\nSilakan gunakan perintah bot biasa:\n!menu - untuk melihat daftar perintah\n!help - untuk bantuan`;
+                    return `❌ *Kuota AI Habis*\n\nMaaf, kuota API OpenRouter sudah habis. Coba lagi nanti ya!`;
                 } else if (apiError.message.includes('unauthorized') || apiError.message.includes('invalid')) {
-                    return `❌ *Error API Key*\n\nMaaf, terjadi masalah dengan API key OpenRouter.\n\nSilakan gunakan perintah bot biasa:\n!menu - untuk melihat daftar perintah\n!help - untuk bantuan`;
+                    return `❌ *Error API Key*\n\nMaaf, ada masalah dengan API key. Coba lagi nanti ya!`;
                 }
                 
-                return `❌ *AI Error*\n\nMaaf, terjadi error saat berkomunikasi dengan AI: ${apiError.message}\n\nSilakan coba lagi nanti atau gunakan perintah bot biasa (!menu)`;
+                return `❌ *AI Error*\n\nMaaf, ada masalah: ${apiError.message}\nCoba lagi nanti ya!`;
             }
 
         } catch (error) {
-            console.error('❌ Error saat generate respons AI:', error.message);
-            return `❌ *System Error*\n\nMaaf, terjadi error sistem: ${error.message}\n\nSilakan coba lagi nanti atau gunakan perintah bot biasa (!menu)`;
+            console.error('❌ Error sistem:', error.message);
+            return `❌ *Error Sistem*\n\nMaaf, ada masalah sistem: ${error.message}\nCoba lagi nanti ya!`;
         }
     }
 
     async reconnect() {
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
             console.error('❌ Gagal reconnect setelah', this.maxReconnectAttempts, 'percobaan');
-            process.exit(1);
+            console.log('🔄 Mencoba restart dari awal...');
+            this.reconnectAttempts = 0; // Reset counter
+            setTimeout(() => this.start(), 10000); // Restart setelah 10 detik
             return;
         }
 
@@ -165,13 +169,16 @@ class WhatsAppBot {
                 await this.client.destroy();
             }
 
+            // Tunggu sebentar sebelum buat client baru
+            await new Promise(resolve => setTimeout(resolve, 3000));
+
             // Buat client baru
             this.initializeClient();
             await this.start();
         } catch (error) {
             console.error('❌ Error saat reconnect:', error.message);
-            // Coba lagi setelah delay
-            setTimeout(() => this.reconnect(), this.reconnectDelay);
+            // Coba lagi setelah delay yang lebih lama
+            setTimeout(() => this.reconnect(), this.reconnectDelay * 2);
         }
     }
 
@@ -192,61 +199,77 @@ class WhatsAppBot {
     setupEventHandlers() {
         // QR Code event
         this.client.on('qr', (qr) => {
-            console.log('🔄 QR Code baru diterima. Silakan scan dengan WhatsApp di HP:');
+            console.log('\n' + '='.repeat(60));
+            console.log('🔄 QR CODE WHATSAPP BOT');
+            console.log('='.repeat(60));
+            console.log('📱 Scan QR code ini dengan WhatsApp di HP Anda:');
+            console.log('='.repeat(60));
             qrcode.generate(qr, { small: true });
+            console.log('='.repeat(60));
+            console.log('📋 Cara scan:');
+            console.log('1. Buka WhatsApp di HP');
+            console.log('2. Tap menu (3 titik) > Linked Devices');
+            console.log('3. Tap "Link a Device"');
+            console.log('4. Scan QR code di atas');
+            console.log('='.repeat(60));
         });
 
         // Ready event
         this.client.on('ready', async () => {
-            console.log('✅ Bot WhatsApp siap digunakan!');
+            console.log('\n' + '🎉'.repeat(20));
+            console.log('✅ BOT WHATSAPP SIAP DIGUNAKAN!');
+            console.log('🎉'.repeat(20));
             this.isConnected = true;
-            this.reconnectAttempts = 0; // Reset counter ketika berhasil connect
+            this.reconnectAttempts = 0;
             await this.startMonitoring();
             
-            // Kirim pesan test ke diri sendiri
-            await this.testSelfMessage();
+            console.log('📱 Bot siap menerima pesan!');
+            console.log('💡 Kirim pesan ke bot untuk test');
         });
 
         // Authentication Failed event
         this.client.on('auth_failure', async (msg) => {
-            console.error('❌ Autentikasi gagal:', msg);
+            console.error('\n❌ Autentikasi gagal:', msg);
+            console.log('🔄 Akan mencoba reconnect dalam 3 detik...');
             this.isConnected = false;
-            await this.reconnect();
+            setTimeout(() => this.reconnect(), 3000);
         });
 
         // Disconnected event
         this.client.on('disconnected', async (reason) => {
-            console.log('❌ Bot terputus:', reason);
+            console.log('\n❌ Bot terputus:', reason);
+            console.log('🔄 Akan mencoba reconnect dalam 3 detik...');
             this.isConnected = false;
-            await this.reconnect();
+            setTimeout(() => this.reconnect(), 3000);
         });
 
         // Connection events
         this.client.on('change_state', async (state) => {
             console.log('🔄 Status koneksi berubah:', state);
             if (state === 'CONFLICT' || state === 'UNLAUNCHED') {
-                await this.reconnect();
+                setTimeout(() => this.reconnect(), 5000);
             }
         });
 
-        // Error handling
+        // Error handling yang lebih baik
         this.client.on('change_battery', (batteryInfo) => {
             if (batteryInfo.battery <= 15 && !batteryInfo.plugged) {
                 console.warn('⚠️ Peringatan: Baterai HP rendah:', batteryInfo.battery + '%');
             }
         });
 
+        // Global error handlers
         process.on('uncaughtException', async (err) => {
-            console.error('❌ Error tidak tertangani:', err);
+            console.error('❌ Error tidak tertangani:', err.message);
             if (!this.isConnected) {
-                await this.reconnect();
+                setTimeout(() => this.reconnect(), 5000);
             }
         });
 
         process.on('unhandledRejection', async (err) => {
-            console.error('❌ Promise rejection tidak tertangani:', err);
+            console.error('❌ Promise rejection tidak tertangani:', err.message);
             if (!this.isConnected) {
-                await this.reconnect();
+                setTimeout(() => this.reconnect(), 5000);
             }
         });
 
@@ -273,94 +296,28 @@ class WhatsAppBot {
                 const contact = await msg.getContact();
                 console.log('- Nama kontak:', contact.pushname || 'Tidak diketahui');
                 
-                // Handle AI command
-                if (msg.body.toLowerCase().startsWith('!ai ')) {
-                    const question = msg.body.slice(4); // Hapus "!ai "
-                    console.log('🤖 Memproses pertanyaan AI:', question);
-                    
+                // Handle pesan dengan fungsi baru
+                const response = await this.handleMessage(msg);
+                if (response) {
                     // Kirim indikator mengetik
                     const chat = await msg.getChat();
                     chat.sendStateTyping();
                     
-                    const response = await this.generateAIResponse(question, msg.from);
+                    // Kirim respons
                     await msg.reply(response);
+                    console.log('✅ Respons terkirim:', response.substring(0, 50) + '...');
                     
                     // Stop indikator mengetik
                     chat.clearState();
-                    
-                    return;
-                }
-
-                // Handle reset command
-                if (msg.body.toLowerCase() === '!reset') {
-                    this.chatHistory.delete(msg.from);
-                    await msg.reply('🔄 History chat dengan AI telah direset!');
-                    return;
-                }
-                
-                // Handle model change command
-                if (msg.body.toLowerCase().startsWith('!model ')) {
-                    const modelName = msg.body.slice(7).toLowerCase();
-                    if (config.ai.models[modelName]) {
-                        this.currentModel = config.ai.models[modelName];
-                        await msg.reply(`✅ Model AI diubah ke: ${this.currentModel}`);
-                        return;
-                    } else {
-                        await msg.reply(`❌ Model tidak valid. Model yang tersedia:\n${Object.keys(config.ai.models).join(', ')}`);
-                        return;
-                    }
-                }
-                
-                // Auto reply untuk pesan yang dimulai dengan "!"
-                if (msg.body.startsWith('!')) {
-                    const command = msg.body.toLowerCase().split(' ')[0];
-                    if (this.commands[command]) {
-                        const reply = this.formatMessage(this.commands[command]);
-                        await msg.reply(reply);
-                        console.log('✅ Membalas pesan dengan command:', command);
-                    }
-                }
-                
-                // Auto reply untuk kata kunci umum
-                const commonReplies = {
-                    'p': 'Iya, ada yang bisa saya bantu? 😊\nKetik !menu untuk melihat daftar perintah.',
-                    'test': 'Bot aktif! 🤖\nKetik !menu untuk melihat daftar perintah.',
-                    'tes': 'Bot aktif! 🤖\nKetik !menu untuk melihat daftar perintah.',
-                    'bot': 'Iya, saya bot WhatsApp 🤖\nKetik !menu untuk melihat daftar perintah.',
-                    'thanks': 'Sama-sama! 😊',
-                    'makasih': 'Sama-sama! 😊',
-                    'thx': 'Sama-sama! 😊',
-                    'halo': 'Halo juga! 👋\nAda yang bisa saya bantu?',
-                    'hai': 'Hai juga! 👋\nAda yang bisa saya bantu?',
-                    'haiii': 'Hai juga! 👋\nAda yang bisa saya bantu?',
-                    'haiiiii': 'Hai juga! 👋\nAda yang bisa saya bantu?',
-                    'haiiiiiii': 'Hai juga! 👋\nAda yang bisa saya bantu?',
-                    'haiiiiiiiii': 'Hai juga! 👋\nAda yang bisa saya bantu?',
-                    'haiiiiiiiiiii': 'Hai juga! 👋\nAda yang bisa saya bantu?',
-                    'sayang': 'Aku sayang kamu! 😊',
-                    'sayangku': 'Aku sayang kamu! 😊',
-                    'sayangkuuu': 'Aku sayang kamu! 😊',
-                    'sayangkuuuu': 'Aku sayang kamu! 😊',
-                    'sayangkuuuuu': 'Aku sayang kamu! 😊',
-                    'sayangkuuuuuu': 'Aku sayang kamu! 😊',
-                    'sayangkuuuuuuu': 'Aku sayang kamu! 😊',
-                };
-
-                const msgLower = msg.body.toLowerCase();
-                if (commonReplies[msgLower]) {
-                    await msg.reply(commonReplies[msgLower]);
-                    console.log('✅ Membalas pesan umum:', msgLower);
-                }
-                
-                // Log message type
-                if (msg.hasMedia) {
-                    const media = await msg.downloadMedia();
-                    console.log('- Tipe media:', media.mimetype);
                 }
                 
             } catch (error) {
                 console.error('❌ Error saat memproses pesan:', error.message);
-                await msg.reply('❌ Maaf, terjadi error. Silakan coba lagi.');
+                try {
+                    await msg.reply('❌ Maaf, terjadi error. Silakan coba lagi.');
+                } catch (replyError) {
+                    console.error('❌ Error saat mengirim reply error:', replyError.message);
+                }
             }
         });
     }
@@ -384,42 +341,34 @@ class WhatsAppBot {
         }
     }
 
-    async testSelfMessage() {
-        try {
-            // Dapatkan info nomor sendiri
-            const myNumber = this.client.info.wid.user;
-            console.log('\n📱 Nomor WhatsApp bot:', myNumber);
-
-            // Format nomor untuk chat
-            const chatId = myNumber + '@c.us';
-
-            // Kirim pesan test
-            console.log('📤 Mengirim pesan test ke diri sendiri...');
-            await this.client.sendMessage(chatId, '🤖 *Bot Test*\n\nBot berhasil dijalankan dan bisa mengirim pesan!\n\nWaktu: ' + new Date().toLocaleString());
-            console.log('✅ Pesan test terkirim!');
-
-            // Tambahan: kirim pesan dengan format
-            setTimeout(async () => {
-                await this.client.sendMessage(chatId, 
-                    '📋 *Daftar Perintah Bot:*\n\n' +
-                    '1. Ketik *test* atau *ping* untuk mengecek bot\n' +
-                    '2. Bot akan membalas dengan status dan waktu respons\n\n' +
-                    '_Bot dibuat dengan whatsapp-web.js_'
-                );
-            }, 1000);
-
-        } catch (error) {
-            console.error('❌ Error saat mengirim pesan test:', error.message);
-        }
-    }
-
     async start() {
         console.log('🤖 Menginisialisasi Bot WhatsApp...');
         try {
             await this.client.initialize();
         } catch (error) {
             console.error('❌ Error saat inisialisasi:', error.message);
-            await this.reconnect();
+            setTimeout(() => this.reconnect(), 5000);
+        }
+    }
+
+    async handleMessage(msg) {
+        try {
+            const text = msg.body.toLowerCase();
+            
+            // Handle perintah dasar
+            if (text.startsWith('!')) {
+                const command = text.split(' ')[0];
+                if (this.commands[command]) {
+                    return this.formatMessage(this.commands[command]);
+                }
+            }
+
+            // Gunakan AI untuk semua respons lainnya
+            return await this.generateAIResponse(msg.body, msg.from);
+            
+        } catch (error) {
+            console.error('Error handling message:', error);
+            return 'Maaf, terjadi kesalahan. Silakan coba lagi.';
         }
     }
 }
